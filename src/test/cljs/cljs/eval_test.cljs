@@ -1,7 +1,8 @@
 (ns cljs.eval-test
   (:require [cljs.test :refer [deftest is]]))
 
-;;; This test namespace should only be loaded by environments that set up cljs.core/*eval*
+;;; This test namespace should only be loaded by environments that set up
+;;; cljs.core/*eval*
 
 (def addition-list-1 (list + 1 2))
 (def addition-list-2 (list + 1 'a))
@@ -18,7 +19,10 @@
   (is (== 3 (eval addition-list-1)))
   (is (== 4 (eval addition-list-2)))
   (is (== 13 (eval (concat addition-list-1 [10]))))
-  (is (= 'lucky-number (:name (meta (eval (list 'def 'lucky-number (concat addition-list-1 [20])))))))
+  (is (= 'lucky-number
+         (:name (meta (eval (list 'def
+                                  'lucky-number
+                                  (concat addition-list-1 [20])))))))
   (is (== 23 (eval 'lucky-number)))
   (is (== 64 ((eval (list comp square cube)) 2)))
   (is (== 5 ((eval (eval +)) 2 3)))

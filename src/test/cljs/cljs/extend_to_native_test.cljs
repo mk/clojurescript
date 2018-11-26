@@ -9,17 +9,13 @@
 (deftest test-extend-to-object
   (extend-type object
     ISeqable
-    (-seq [coll]
-      (map #(vector % (aget coll %)) (js-keys coll)))
-
+      (-seq [coll] (map #(vector % (aget coll %)) (js-keys coll)))
     ILookup
-    (-lookup
-      ([coll k]
-       (-lookup coll k nil))
-      ([coll k not-found]
-       (if-let [v (aget coll k)]
-         v
-         not-found))))
+      (-lookup ([coll k] (-lookup coll k nil))
+               ([coll k not-found]
+                (if-let [v (aget coll k)]
+                  v
+                  not-found))))
   (is (= (seq (js-obj "foo" 1 "bar" 2)) '(["foo" 1] ["bar" 2])))
   (is (= (get (js-obj "foo" 1) "foo") 1))
   (is (= (get (js-obj "foo" 1) "bar" ::not-found) ::not-found))
@@ -28,23 +24,19 @@
 (deftest test-cljs-2812
   (extend-protocol IPrintWithWriter
     object
-    (-pr-writer [obj writer _]
-      (write-all writer "#object[custom-print-cljs-2812]"))
+      (-pr-writer [obj writer _]
+        (write-all writer "#object[custom-print-cljs-2812]"))
     boolean
-    (-pr-writer [obj writer _]
-      (write-all writer "#boolean[" (str obj) "]"))
+      (-pr-writer [obj writer _] (write-all writer "#boolean[" (str obj) "]"))
     number
-    (-pr-writer [obj writer _]
-      (write-all writer "#number[" (str obj) "]"))
+      (-pr-writer [obj writer _] (write-all writer "#number[" (str obj) "]"))
     string
-    (-pr-writer [obj writer _]
-      (write-all writer "#string[" obj "]"))
+      (-pr-writer [obj writer _] (write-all writer "#string[" obj "]"))
     array
-    (-pr-writer [obj writer _]
-      (write-all writer "#array[" (count obj) "]"))
+      (-pr-writer [obj writer _] (write-all writer "#array[" (count obj) "]"))
     function
-    (-pr-writer [obj writer _]
-      (write-all writer "#function[custom-print-cljs-2812]")))
+      (-pr-writer [obj writer _]
+        (write-all writer "#function[custom-print-cljs-2812]")))
   (is (= "#object[custom-print-cljs-2812]" (pr-str #js {})))
   (is (= "#boolean[true]" (pr-str true)))
   (is (= "#number[11]" (pr-str 11)))
@@ -54,25 +46,20 @@
   ;; Restore basic native types so that test summary output looks correct
   (extend-protocol IPrintWithWriter
     object
-    (-pr-writer [obj writer _]
-      (write-all writer (str obj)))
+      (-pr-writer [obj writer _] (write-all writer (str obj)))
     boolean
-    (-pr-writer [obj writer _]
-      (write-all writer (str obj)))
+      (-pr-writer [obj writer _] (write-all writer (str obj)))
     number
-    (-pr-writer [obj writer _]
-      (write-all writer (str obj)))
+      (-pr-writer [obj writer _] (write-all writer (str obj)))
     string
-    (-pr-writer [obj writer _]
-      (write-all writer obj))))
+      (-pr-writer [obj writer _] (write-all writer obj))))
 
 (deftest test-cljs-2974
   (extend-protocol IEmptyableCollection
     array
-    (-empty [_] #js []))
+      (-empty [_] #js []))
   (let [empty-array (empty #js [1 2 3])]
-    (is (and (array? empty-array)
-             (empty? empty-array)))))
+    (is (and (array? empty-array) (empty? empty-array)))))
 
 (defn test-map-entry [x] (when (map-entry? x) (-key x)))
 (defn test-coll [x] (when (coll? x) (-conj x 1)))
@@ -93,37 +80,71 @@
 (defn test-reduceable [x] (when (reduceable? x) (-reduce x inc)))
 
 (deftest test-extend-to-protocols
-  (extend-type string IMapEntry (-key [_] :a))
+  (extend-type string
+    IMapEntry
+      (-key [_] :a))
   (is (nil? (test-map-entry "a")))
-  (extend-type string ICollection (-conj [_ _] :b))
+  (extend-type string
+    ICollection
+      (-conj [_ _] :b))
   (is (= :b (test-coll "a")))
-  (extend-type string ISet (-disjoin [_ _] :c))
+  (extend-type string
+    ISet
+      (-disjoin [_ _] :c))
   (is (= :c (test-set "a")))
-  (extend-type string IAssociative (-assoc [_ _ _] :d))
+  (extend-type string
+    IAssociative
+      (-assoc [_ _ _] :d))
   (is (= :d (test-associative "a")))
-  (extend-type string IFind (-find [_ _] :e))
+  (extend-type string
+    IFind
+      (-find [_ _] :e))
   (is (= :e (test-find "a")))
-  (extend-type string ISorted (-sorted-seq [_ _] :f))
+  (extend-type string
+    ISorted
+      (-sorted-seq [_ _] :f))
   (is (= :f (test-sorted "a")))
-  (extend-type string IMap (-dissoc [_ _] :g))
+  (extend-type string
+    IMap
+      (-dissoc [_ _] :g))
   (is (= :g (test-map "a")))
-  (extend-type string IVector (-assoc-n [_ _ _] :h))
+  (extend-type string
+    IVector
+      (-assoc-n [_ _ _] :h))
   (is (= :h (test-vector "a")))
-  (extend-type string IChunkedSeq (-chunked-first [_] :i))
+  (extend-type string
+    IChunkedSeq
+      (-chunked-first [_] :i))
   (is (nil? (test-chunked-seq "a")))
-  (extend-type string IFn (-invoke [_] :j))
+  (extend-type string
+    IFn
+      (-invoke [_] :j))
   (is (= :j (test-ifn "a")))
-  (extend-type string IReversible (-rseq [_] :k))
+  (extend-type string
+    IReversible
+      (-rseq [_] :k))
   (is (= :k (test-reversible "a")))
-  (extend-type string IIterable (-iterator [_] :l))
+  (extend-type string
+    IIterable
+      (-iterator [_] :l))
   (is (= :l (test-iterable "a")))
-  (extend-type string ICloneable (-clone [_] :m))
+  (extend-type string
+    ICloneable
+      (-clone [_] :m))
   (is (= :m (test-cloneable "a")))
-  (extend-type string ICounted (-count [_] :n))
+  (extend-type string
+    ICounted
+      (-count [_] :n))
   (is (= :n (test-counted "a")))
-  (extend-type string IIndexed (-nth [_] :o))
+  (extend-type string
+    IIndexed
+      (-nth [_] :o))
   (is (= :o (test-indexed "a")))
-  (extend-type number ISeqable (-seq [_] :p))
+  (extend-type number
+    ISeqable
+      (-seq [_] :p))
   (is (= :p (test-seqable 1)))
-  (extend-type string IReduce (-reduce [_ _] :q))
+  (extend-type string
+    IReduce
+      (-reduce [_ _] :q))
   (is (= :q (test-reduceable "a"))))

@@ -10,8 +10,7 @@
 
 (println "Hello from foo!")
 
-(events/listen (gdom/getElement "button") EventType.CLICK
-  (fn [e]
-    (loader/load :bar
-      (fn []
-        ((resolve 'loader-test.bar/woz))))))
+(events/listen (gdom/getElement "button")
+               EventType.CLICK
+               (fn [e]
+                 (loader/load :bar (fn [] ((resolve 'loader-test.bar/woz))))))

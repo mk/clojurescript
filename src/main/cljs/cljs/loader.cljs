@@ -1,7 +1,8 @@
 ;   Copyright (c) Rich Hickey. All rights reserved.
 ;   The use and distribution terms for this software are covered by the
 ;   Eclipse Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
-;   which can be found in the file epl-v10.html at the root of this distribution.
+;   which can be found in the file epl-v10.html at the root of this
+;   distribution.
 ;   By using this software in any fashion, you are agreeing to be bound by
 ;   the terms of this license.
 ;   You must not remove this notice, or any other, from this software
@@ -11,29 +12,38 @@
   (:import [goog.module ModuleLoader]
            [goog.module ModuleManager]))
 
-(def module-infos MODULE_INFOS) ;; set by compiler
+(def module-infos MODULE_INFOS);; set by compiler
 (def module-uris
-  (if (exists? js/COMPILED_MODULE_URIS)
-    js/COMPILED_MODULE_URIS
-    MODULE_URIS)) ;; set by compiler
+  (if (exists? js/COMPILED_MODULE_URIS) js/COMPILED_MODULE_URIS MODULE_URIS));; set by compiler
 
-(defn deps-for [x graph]
+(defn deps-for
+  [x graph]
   (let [depends-on (get graph x)]
     (-> (mapcat #(deps-for % graph) depends-on)
-      (concat depends-on) distinct vec)))
+        (concat depends-on)
+        distinct
+        vec)))
 
-(defn munge-kw [x]
+(defn munge-kw
+  [x]
   (cond-> x
-    (keyword? x) (-> name munge)))
+    (keyword? x) (-> name
+                     munge)))
 
-(defn to-js [m]
-  (reduce-kv
-    (fn [ret k xs]
-      (let [arr (into-array (map munge-kw xs))]
-        (doto ret (gobj/set (-> k name munge) arr))))
-    #js {} m))
+(defn to-js
+  [m]
+  (reduce-kv (fn [ret k xs]
+               (let [arr (into-array (map munge-kw xs))]
+                 (doto ret
+                   (gobj/set (-> k
+                                 name
+                                 munge)
+                             arr))))
+             #js {}
+             m))
 
-(defn create-module-manager []
+(defn create-module-manager
+  []
   (let [mm (ModuleManager.)
         ml (ModuleLoader.)]
     (.setLoader mm ml)
@@ -42,29 +52,30 @@
 (defonce ^:dynamic *module-manager* (create-module-manager))
 
 (.setAllModuleInfo *module-manager* (to-js module-infos))
-(.setModuleUris *module-manager*
-  (cond-> module-uris (map? module-uris) to-js))
+(.setModuleUris *module-manager* (cond-> module-uris (map? module-uris) to-js))
 
 (defn loaded?
   "Return true if modules is loaded. module-name should be a keyword matching
    a :modules module definition."
   [module-name]
   (assert (contains? module-infos module-name)
-    (str "Module " module-name " does not exist"))
-  (let [mname (-> module-name name munge)
+          (str "Module " module-name " does not exist"))
+  (let [mname (-> module-name
+                  name
+                  munge)
         module (.getModuleInfo *module-manager* mname)]
-    (when (some? module)
-      (.isLoaded module))))
+    (when (some? module) (.isLoaded module))))
 
 (defn load
   "Load a module. module-name should be a keyword matching a :modules module
    definition."
-  ([module-name]
-    (load module-name nil))
+  ([module-name] (load module-name nil))
   ([module-name cb]
    (assert (contains? module-infos module-name)
-     (str "Module " module-name " does not exist"))
-   (let [mname (-> module-name name munge)]
+           (str "Module " module-name " does not exist"))
+   (let [mname (-> module-name
+                   name
+                   munge)]
      (if-not (nil? cb)
        (.execOnLoad *module-manager* mname cb)
        (.load *module-manager* mname)))))
@@ -75,10 +86,9 @@
   loaded."
   [module-name]
   (assert (contains? module-infos module-name)
-    (str "Module " module-name " does not exist"))
+          (str "Module " module-name " does not exist"))
   (let [xs (deps-for module-name module-infos)]
-    (doseq [x xs]
-      (.setLoaded *module-manager* (munge-kw x)))
+    (doseq [x xs] (.setLoaded *module-manager* (munge-kw x)))
     (.setLoaded *module-manager* (munge-kw module-name))))
 
 (defn prefetch
@@ -90,6 +100,8 @@
   (assert (contains? module-infos module-name)
           (str "Module " module-name " does not exist"))
   (when-not (loaded? module-name)
-    (let [mname (-> module-name name munge)]
+    (let [mname (-> module-name
+                    name
+                    munge)]
       (when-not (.isModuleLoading *module-manager* mname)
         (.prefetchModule *module-manager* mname)))))

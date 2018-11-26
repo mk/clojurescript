@@ -15,8 +15,7 @@
   ;; rename works
   (is (= (array-seq (slc #js [1 2 3] 1)) [2 3])))
 
-(deftest test-global-exports
-  (is (= (plus 1 2) 3)))
+(deftest test-global-exports (is (= (plus 1 2) 3)))
 
 (deftest test-cljs-2224
   ;; array should be correctly resolved in the current NS (shadows module)
@@ -24,8 +23,6 @@
   ;; same should happen with global-exports
   (is (= vector [1])))
 
-(deftest test-cljs-2286
-  (is (= 3 (es6_calc/calculator.add 1 2))))
+(deftest test-cljs-2286 (is (= 3 (es6_calc/calculator.add 1 2))))
 
-(deftest test-cljs-1620
-  (is (= "Hello, world!" (es6hello/default))))
+(deftest test-cljs-1620 (is (= "Hello, world!" (es6hello/default))))

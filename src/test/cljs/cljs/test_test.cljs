@@ -3,10 +3,7 @@
             [clojure.string :as s]
             [clojure.set :as set]))
 
-(defn- nan?
-  [x]
-  (and (number? x)
-       (js/isNaN x)))
+(defn- nan? [x] (and (number? x) (js/isNaN x)))
 
 (deftest js-line-and-column-test
   (is (= [2 3] (ct/js-line-and-column "foo:bar:2:3")))
@@ -29,4 +26,6 @@
     (is (nan? column))))
 
 (deftest test-js-filename
-  (is (= "core-advanced-test.js" (ct/js-filename (str "nW@" (ct/cljs-output-dir) "/core-advanced-test.js:1191:77")))))
+  (is (= "core-advanced-test.js"
+         (ct/js-filename
+           (str "nW@" (ct/cljs-output-dir) "/core-advanced-test.js:1191:77")))))

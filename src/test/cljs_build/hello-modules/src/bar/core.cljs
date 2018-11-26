@@ -5,7 +5,6 @@
 
 (println "I'm bar!")
 
-(defn woz []
-  (println "WOZ!"))
+(defn woz [] (println "WOZ!"))
 
 (loader/set-loaded! :bar)

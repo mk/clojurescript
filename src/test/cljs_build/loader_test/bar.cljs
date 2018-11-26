@@ -5,5 +5,4 @@
 
 (println "Hello from bar!")
 
-(defn woz []
-  (println "Woz!"))
+(defn woz [] (println "Woz!"))

@@ -1,7 +1,8 @@
 ;   Copyright (c) Rich Hickey. All rights reserved.
 ;   The use and distribution terms for this software are covered by the
 ;   Eclipse Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
-;   which can be found in the file epl-v10.html at the root of this distribution.
+;   which can be found in the file epl-v10.html at the root of this
+;   distribution.
 ;   By using this software in any fashion, you are agreeing to be bound by
 ;   the terms of this license.
 ;   You must not remove this notice, or any other, from this software.
@@ -11,9 +12,7 @@
   (:require [goog.string :as gstring])
   (:import [goog.string StringBuffer]))
 
-(defn- seq-reverse
-  [coll]
-  (reduce conj () coll))
+(defn- seq-reverse [coll] (reduce conj () coll))
 
 (def ^:private re-surrogate-pair
   (js/RegExp. "([\\uD800-\\uDBFF])([\\uDC00-\\uDFFF])" "g"))
@@ -37,9 +36,7 @@
   [f]
   (fn [& args]
     (let [matches (drop-last 2 args)]
-      (if (= (count matches) 1)
-        (f (first matches))
-        (f (vec matches))))))
+      (if (= (count matches) 1) (f (first matches)) (f (vec matches))))))
 
 (defn replace
   "Replaces all instance of match with replacement in s.
@@ -62,16 +59,13 @@
    (clojure.string/replace \"Almost Pig Latin\" #\"\\b(\\w)(\\w+)\\b\" \"$2$1ay\")
    -> \"lmostAay igPay atinLay\""
   [s match replacement]
-  (cond
-    (string? match)
-    (.replace s (js/RegExp. (gstring/regExpEscape match) "g") replacement)
-
-    (instance? js/RegExp match)
-    (if (string? replacement)
-      (replace-all s match replacement)
-      (replace-all s match (replace-with replacement)))
-
-    :else (throw (str "Invalid match arg: " match))))
+  (cond (string? match)
+          (.replace s (js/RegExp. (gstring/regExpEscape match) "g") replacement)
+        (instance? js/RegExp match)
+          (if (string? replacement)
+            (replace-all s match replacement)
+            (replace-all s match (replace-with replacement)))
+        :else (throw (str "Invalid match arg: " match))))
 
 (defn replace-first
   "Replaces the first instance of match with replacement in s.
@@ -101,30 +95,24 @@
   "Returns a string of all elements in coll, as returned by (seq coll),
   separated by an optional separator."
   ([coll]
-   (loop [sb (StringBuffer.) coll (seq coll)]
+   (loop [sb (StringBuffer.)
+          coll (seq coll)]
      (if-not (nil? coll)
        (recur (. sb (append (str (first coll)))) (next coll))
        (.toString sb))))
   ([separator coll]
-   (loop [sb (StringBuffer.) coll (seq coll)]
+   (loop [sb (StringBuffer.)
+          coll (seq coll)]
      (if-not (nil? coll)
-       (do
-         (. sb (append (str (first coll))))
-         (let [coll (next coll)]
-           (when-not (nil? coll)
-             (. sb (append separator)))
-           (recur sb coll)))
+       (do (. sb (append (str (first coll))))
+           (let [coll (next coll)]
+             (when-not (nil? coll) (. sb (append separator)))
+             (recur sb coll)))
        (.toString sb)))))
 
-(defn upper-case
-  "Converts string to all upper-case."
-  [s]
-  (.toUpperCase s))
+(defn upper-case "Converts string to all upper-case." [s] (.toUpperCase s))
 
-(defn lower-case
-  "Converts string to all lower-case."
-  [s]
-  (.toLowerCase s))
+(defn lower-case "Converts string to all lower-case." [s] (.toLowerCase s))
 
 (defn capitalize
   "Converts first character of the string to upper-case, all other
@@ -143,16 +131,11 @@
 
 (defn- pop-last-while-empty
   [v]
-  (loop [v v]
-    (if (identical? "" (peek v))
-      (recur (pop v))
-      v)))
+  (loop [v v] (if (identical? "" (peek v)) (recur (pop v)) v)))
 
 (defn- discard-trailing-if-needed
   [limit v]
-  (if (and (== 0 limit) (< 1 (count v)))
-    (pop-last-while-empty v)
-    v))
+  (if (and (== 0 limit) (< 1 (count v))) (pop-last-while-empty v) v))
 
 (defn- split-with-empty-regex
   [s limit]
@@ -162,41 +145,36 @@
       1 (vector s)
       2 (vector "" s)
       (let [c (- limit 2)]
-        (conj (vec (cons "" (subvec (vec (map str (seq s))) 0 c))) (subs s c))))))
+        (conj (vec (cons "" (subvec (vec (map str (seq s))) 0 c)))
+              (subs s c))))))
 
 (defn split
   "Splits string on a regular expression. Optional argument limit is
   the maximum number of splits. Not lazy. Returns vector of the splits."
-  ([s re]
-     (split s re 0))
-    ([s re limit]
-     (discard-trailing-if-needed limit
-       (if (identical? "/(?:)/" (str re))
-         (split-with-empty-regex s limit)
-         (if (< limit 1)
-           (vec (.split (str s) re))
-           (loop [s s
-                  limit limit
-                  parts []]
-             (if (== 1 limit)
-               (conj parts s)
-               (let [m (re-find re s)]
-                 (if-not (nil? m)
-                   (let [index (.indexOf s m)]
-                     (recur (.substring s (+ index (count m)))
-                       (dec limit)
-                       (conj parts (.substring s 0 index))))
-                   (conj parts s))))))))))
+  ([s re] (split s re 0))
+  ([s re limit]
+   (discard-trailing-if-needed
+     limit
+     (if (identical? "/(?:)/" (str re))
+       (split-with-empty-regex s limit)
+       (if (< limit 1)
+         (vec (.split (str s) re))
+         (loop [s s
+                limit limit
+                parts []]
+           (if (== 1 limit)
+             (conj parts s)
+             (let [m (re-find re s)]
+               (if-not (nil? m)
+                 (let [index (.indexOf s m)]
+                   (recur (.substring s (+ index (count m)))
+                          (dec limit)
+                          (conj parts (.substring s 0 index))))
+                 (conj parts s))))))))))
 
-(defn split-lines
-  "Splits s on \\n or \\r\\n."
-  [s]
-  (split s #"\n|\r\n"))
+(defn split-lines "Splits s on \\n or \\r\\n." [s] (split s #"\n|\r\n"))
 
-(defn trim
-  "Removes whitespace from both ends of string."
-  [s]
-  (gstring/trim s))
+(defn trim "Removes whitespace from both ends of string." [s] (gstring/trim s))
 
 (defn triml
   "Removes whitespace from the left side of string."
@@ -216,8 +194,7 @@
     (if (zero? index)
       ""
       (let [ch (get s (dec index))]
-        (if (or (identical? \newline ch)
-                (identical? \return ch))
+        (if (or (identical? \newline ch) (identical? \return ch))
           (recur (dec index))
           (.substring s 0 index))))))
 
@@ -248,30 +225,18 @@
 (defn index-of
   "Return index of value (string or char) in s, optionally searching
   forward from from-index or nil if not found."
-  ([s value]
-   (let [result (.indexOf s value)]
-     (if (neg? result)
-       nil
-       result)))
+  ([s value] (let [result (.indexOf s value)] (if (neg? result) nil result)))
   ([s value from-index]
-   (let [result (.indexOf s value from-index)]
-     (if (neg? result)
-       nil
-       result))))
+   (let [result (.indexOf s value from-index)] (if (neg? result) nil result))))
 
 (defn last-index-of
   "Return last index of value (string or char) in s, optionally
   searching backward from from-index or nil if not found."
   ([s value]
-   (let [result (.lastIndexOf s value)]
-     (if (neg? result)
-       nil
-       result)))
+   (let [result (.lastIndexOf s value)] (if (neg? result) nil result)))
   ([s value from-index]
    (let [result (.lastIndexOf s value from-index)]
-     (if (neg? result)
-       nil
-       result))))
+     (if (neg? result) nil result))))
 
 (defn ^boolean starts-with?
   "True if s starts with substr."

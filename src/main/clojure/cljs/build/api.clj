@@ -1,7 +1,8 @@
 ;   Copyright (c) Rich Hickey. All rights reserved.
 ;   The use and distribution terms for this software are covered by the
 ;   Eclipse Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
-;   which can be found in the file epl-v10.html at the root of this distribution.
+;   which can be found in the file epl-v10.html at the root of this
+;   distribution.
 ;   By using this software in any fashion, you are agreeing to be bound by
 ;   the terms of this license.
 ;   You must not remove this notice, or any other, from this software
@@ -54,9 +55,7 @@
   ('example.core 'example.util)"
   ([namespaces]
    (closure/cljs-dependents-for-macro-namespaces
-     (if-not (nil? env/*compiler*)
-       env/*compiler*
-       (env/default-compiler-env))
+     (if-not (nil? env/*compiler*) env/*compiler* (env/default-compiler-env))
      namespaces))
   ([state namespaces]
    (closure/cljs-dependents-for-macro-namespaces state namespaces)))
@@ -73,14 +72,16 @@
   provide build options with :output-dir specified."
   ([src] (src-file->target-file src nil))
   ([src opts]
-   (src-file->target-file
-     (if-not (nil? env/*compiler*)
-       env/*compiler*
-       (env/default-compiler-env opts))
-     src opts))
+   (src-file->target-file (if-not (nil? env/*compiler*)
+                            env/*compiler*
+                            (env/default-compiler-env opts))
+                          src
+                          opts))
   ([state src opts]
-   (env/with-compiler-env state
-     (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
+   (env/with-compiler-env
+     state
+     (binding [ana/*cljs-warning-handlers*
+                 (:warning-handlers opts ana/*cljs-warning-handlers*)]
        (closure/src-file->target-file src opts)))))
 
 (defn ^String src-file->goog-require
@@ -88,14 +89,16 @@
   the goog.require statement for it."
   ([src] (src-file->goog-require src nil))
   ([src options]
-   (src-file->goog-require
-     (if-not (nil? env/*compiler*)
-       env/*compiler*
-       (env/default-compiler-env options))
-     src options))
+   (src-file->goog-require (if-not (nil? env/*compiler*)
+                             env/*compiler*
+                             (env/default-compiler-env options))
+                           src
+                           options))
   ([state src options]
-   (env/with-compiler-env state
-     (binding [ana/*cljs-warning-handlers* (:warning-handlers options ana/*cljs-warning-handlers*)]
+   (env/with-compiler-env
+     state
+     (binding [ana/*cljs-warning-handlers*
+                 (:warning-handlers options ana/*cljs-warning-handlers*)]
        (closure/src-file->goog-require src options)))))
 
 ;; =============================================================================
@@ -124,12 +127,10 @@
   .cljs, .cljc, .js. Returns a map containing :relative-path a string, and
   :uri a URL."
   ([ns]
-   (ns->location ns
-     (if-not (nil? env/*compiler*)
-       env/*compiler*
-       (env/default-compiler-env))))
-  ([ns compiler-env]
-   (closure/source-for-namespace ns compiler-env)))
+   (ns->location
+     ns
+     (if-not (nil? env/*compiler*) env/*compiler* (env/default-compiler-env))))
+  ([ns compiler-env] (closure/source-for-namespace ns compiler-env)))
 
 (defn add-dependencies
   "DEPRECATED: Given one or more IJavaScript objects in dependency order, produce
@@ -151,30 +152,26 @@
   [& xs]
   (reify
     closure/Inputs
-    (-paths [_]
-      (map io/file xs))
+      (-paths [_] (map io/file xs))
     closure/Compilable
-    (-compile [_ opts]
-      (letfn [(compile-input [x]
-                (let [compiled (closure/-compile x opts)]
-                  (if (sequential? compiled)
-                    compiled
-                    [compiled])))]
-        (mapcat compile-input xs)))
-    (-find-sources [_ opts]
-      (mapcat #(closure/-find-sources % opts) xs))))
+      (-compile [_ opts]
+        (letfn [(compile-input
+                  [x]
+                  (let [compiled (closure/-compile x opts)]
+                    (if (sequential? compiled) compiled [compiled])))]
+          (mapcat compile-input xs)))
+      (-find-sources [_ opts] (mapcat #(closure/-find-sources % opts) xs))))
 
 (defn compile
   "Given a Compilable, compile it and return an IJavaScript."
   ([opts compilable]
-   (compile
-     (if-not (nil? env/*compiler*)
-       env/*compiler*
-       (env/default-compiler-env opts))
-     opts compilable))
+   (compile (if-not (nil? env/*compiler*)
+              env/*compiler*
+              (env/default-compiler-env opts))
+            opts
+            compilable))
   ([state opts compilable]
-   (env/with-compiler-env state
-     (closure/compile compilable opts))))
+   (env/with-compiler-env state (closure/compile compilable opts))))
 
 (defn output-unoptimized
   "Ensure that all JavaScript source files are on disk (not in jars),
@@ -189,42 +186,51 @@
 (defn build
   "Given compiler options, produce runnable JavaScript. An optional source
    parameter may be provided."
-  ([opts]
-   (build nil opts))
+  ([opts] (build nil opts))
   ([source opts]
-   (build source opts
-     (if-not (nil? env/*compiler*)
-       env/*compiler*
-       (env/default-compiler-env
-         ;; need to dissoc :foreign-libs since we won't know what overriding
-         ;; foreign libspecs are referring to until after add-implicit-options
-         ;; - David
-         (closure/add-externs-sources (dissoc opts :foreign-libs))))))
+   (build source
+          opts
+          (if-not (nil? env/*compiler*)
+            env/*compiler*
+            (env/default-compiler-env ;; need to dissoc :foreign-libs since we
+                                      ;; won't know what overriding
+                                      ;; foreign libspecs are referring to until
+                                      ;; after add-implicit-options
+                                      ;; - David
+                                      (closure/add-externs-sources
+                                        (dissoc opts :foreign-libs))))))
   ([source opts compiler-env]
-   (doseq [[unknown-opt suggested-opt] (util/unknown-opts (set (keys opts)) closure/known-opts)]
+   (doseq [[unknown-opt suggested-opt] (util/unknown-opts (set (keys opts))
+                                                          closure/known-opts)]
      (when suggested-opt
-       (println (str "WARNING: Unknown compiler option '" unknown-opt "'. Did you mean '" suggested-opt "'?"))))
-   (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
+       (println (str "WARNING: Unknown compiler option '"
+                     unknown-opt
+                     "'. Did you mean '"
+                     suggested-opt
+                     "'?"))))
+   (binding [ana/*cljs-warning-handlers*
+               (:warning-handlers opts ana/*cljs-warning-handlers*)]
      (closure/build source opts compiler-env))))
 
 (defn watch
   "Given a source which can be compiled, watch it for changes to produce."
   ([source opts]
-   (watch source opts
-     (if-not (nil? env/*compiler*)
-       env/*compiler*
-       (env/default-compiler-env
-         (closure/add-externs-sources opts)))))
-  ([source opts compiler-env]
-   (watch source opts compiler-env nil))
+   (watch source
+          opts
+          (if-not (nil? env/*compiler*)
+            env/*compiler*
+            (env/default-compiler-env (closure/add-externs-sources opts)))))
+  ([source opts compiler-env] (watch source opts compiler-env nil))
   ([source opts compiler-env stop]
-   (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
+   (binding [ana/*cljs-warning-handlers*
+               (:warning-handlers opts ana/*cljs-warning-handlers*)]
      (closure/watch source opts compiler-env stop))))
 
 ;; =============================================================================
 ;; Node.js / NPM dependencies
 
-(defn compiler-opts? [m]
+(defn compiler-opts?
+  [m]
   (and (map? m)
        (or (contains? m :output-to)
            (contains? m :modules)
@@ -240,8 +246,8 @@
    (if (compiler-opts? dependencies)
      (install-node-deps! (:npm-deps dependencies) dependencies)
      (install-node-deps! dependencies
-       (when-not (nil? env/*compiler*)
-         (:options @env/*compiler*)))))
+                         (when-not (nil? env/*compiler*)
+                           (:options @env/*compiler*)))))
   ([dependencies opts]
    {:pre [(map? dependencies)]}
    (closure/check-npm-deps opts)
@@ -259,21 +265,18 @@
    (if (compiler-opts? dependencies)
      (get-node-deps (keys (:npm-deps dependencies)) dependencies)
      (get-node-deps dependencies
-       (when-not (nil? env/*compiler*)
-         (:options @env/*compiler*)))))
+                    (when-not (nil? env/*compiler*)
+                      (:options @env/*compiler*)))))
   ([dependencies opts]
    {:pre [(sequential? dependencies)]}
-   (closure/index-node-modules
-     (distinct (concat (keys (:npm-deps opts)) (map str dependencies)))
-     opts)))
+   (closure/index-node-modules (distinct (concat (keys (:npm-deps opts))
+                                                 (map str dependencies)))
+                               opts)))
 
-(comment
-  (node-module-deps
-    {:file (.getAbsolutePath (io/file "src/test/node/test.js"))})
-
-  (node-module-deps
-    {:file (.getAbsolutePath (io/file "src/test/node/test.js"))})
-  )
+(comment (node-module-deps {:file (.getAbsolutePath
+                                    (io/file "src/test/node/test.js"))})
+         (node-module-deps {:file (.getAbsolutePath
+                                    (io/file "src/test/node/test.js"))}))
 
 (defn node-inputs
   "EXPERIMENTAL: return the foreign libs entries as computed by running
@@ -282,32 +285,20 @@
    installed."
   ([entries]
    (node-inputs entries
-     (when-not (nil? env/*compiler*)
-       (:options @env/*compiler*))))
-  ([entries opts]
-   (closure/node-inputs entries opts)))
+                (when-not (nil? env/*compiler*) (:options @env/*compiler*))))
+  ([entries opts] (closure/node-inputs entries opts)))
 
-(comment
-  (node-inputs
-    [{:file "src/test/node/test.js"}])
-  )
+(comment (node-inputs [{:file "src/test/node/test.js"}]))
 
 (comment
   (def test-cenv (atom {}))
   (def test-env (assoc-in (ana/empty-env) [:ns :name] 'cljs.user))
-
   (binding [ana/*cljs-ns* 'cljs.user]
-    (env/with-compiler-env test-cenv
-      (ana/no-warn
-        (ana/analyze test-env
-         '(ns cljs.user
-            (:use [clojure.string :only [join]]))))))
-
-  (env/with-compiler-env test-cenv
-    (ns-dependents 'clojure.string))
-
-  (map
-    #(target-file-for-cljs-ns % "out-dev")
-    (env/with-compiler-env test-cenv
-     (ns-dependents 'clojure.string)))
-  )
+    (env/with-compiler-env
+      test-cenv
+      (ana/no-warn (ana/analyze test-env
+                                '(ns cljs.user
+                                   (:use [clojure.string :only [join]]))))))
+  (env/with-compiler-env test-cenv (ns-dependents 'clojure.string))
+  (map #(target-file-for-cljs-ns % "out-dev")
+    (env/with-compiler-env test-cenv (ns-dependents 'clojure.string))))

@@ -4,10 +4,10 @@
   (:require [clojure.browser.net :as net]
             [clojure.browser.event :as event]))
 
-(defn- evaluate-javascript [block]
+(defn- evaluate-javascript
+  [block]
   (let [result (try (js* "eval(~{block})")
-                    (catch :default e
-                      (.log js/console e)))]
+                    (catch :default e (.log js/console e)))]
     result))
 
 (defn- query-reflection
@@ -15,10 +15,11 @@
   Calls cb with the result."
   [query-param cb]
   (let [conn (net/xhr-connection)
-        url  (str "/reflect?" query-param)]
-    (event/listen conn :success (fn [e]
-                                  (let [resp (.getResponseText (.-currentTarget e) ())]
-                                    (cb resp))))
+        url (str "/reflect?" query-param)]
+    (event/listen
+      conn
+      :success
+      (fn [e] (let [resp (.getResponseText (.-currentTarget e) ())] (cb resp))))
     (event/listen conn :error #(println "Reflection query failed."))
     (net/transmit conn url)))
 
@@ -34,13 +35,12 @@
   "Queries the reflection api with a quoted macro form, then calls the
   callback function with the macroexpanded form, as a string."
   [form]
-  (query-reflection (str "macroform=" (js/encodeURIComponent (str form))) println))
+  (query-reflection (str "macroform=" (js/encodeURIComponent (str form)))
+                    println))
 
-(defn print-doc [{:keys [name method-params doc]}]
-  (when-not (empty? name)
-    (println name)
-    (println method-params)
-    (println doc)))
+(defn print-doc
+  [{:keys [name method-params doc]}]
+  (when-not (empty? name) (println name) (println method-params) (println doc)))
 
 (defn doc
   "Queries the reflection api with a fully qualified symbol, then prints

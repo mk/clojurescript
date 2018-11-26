@@ -1,7 +1,8 @@
 ;   Copyright (c) Rich Hickey. All rights reserved.
 ;   The use and distribution terms for this software are covered by the
 ;   Eclipse Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
-;   which can be found in the file epl-v10.html at the root of this distribution.
+;   which can be found in the file epl-v10.html at the root of this
+;   distribution.
 ;   By using this software in any fashion, you are agreeing to be bound by
 ;   the terms of this license.
 ;   You must not remove this notice, or any other, from this software.
@@ -19,19 +20,22 @@
 (def results-per-page 100)
 (def max-missing-query 20)
 
-(def initial-state {:max-id 0
-                    :graph {}
-                    :listeners {}
-                    :tweet-count 0
-                    :search-tag nil
-                    :ignore-mentions #{}})
+(def initial-state
+  {:max-id 0,
+   :graph {},
+   :listeners {},
+   :tweet-count 0,
+   :search-tag nil,
+   :ignore-mentions #{}})
 
 (def state (atom initial-state))
 
 (defn add-listener
   "Add a listener to the graph."
   [graph k f]
-  (let [l (-> graph :listeners k)]
+  (let [l (-> graph
+              :listeners
+              k)]
     (assoc-in graph [:listeners k] (conj l f))))
 
 (defn register
@@ -50,19 +54,17 @@
 (defn retrieve
   "Send request to twitter."
   [payload callback error-callback]
-  (.send (goog.net.Jsonp. twitter-uri)
-         payload
-         callback
-         error-callback))
+  (.send (goog.net.Jsonp. twitter-uri) payload callback error-callback))
 
 (defn send-event
   "For the given event, call every listener for that event, passing the
    message."
-  ([event]
-     (send-event event nil))
+  ([event] (send-event event nil))
   ([event message]
-     (doseq [f (-> @state :listeners event)]
-       (f message))))
+   (doseq [f (-> @state
+                 :listeners
+                 event)]
+     (f message))))
 
 (defn parse-mentions
   "Given a map representing a single tweet, return all mentions that
@@ -70,7 +72,7 @@
   sensitive so mentioned usernames are always returned in lower case."
   [tweet]
   (map #(string/lower-case (apply str (drop 1 %)))
-       (re-seq (re-pattern "@\\w+") (:text tweet))))
+    (re-seq (re-pattern "@\\w+") (:text tweet))))
 
 (defn add-mentions
   "Add the user to the mentions map for first user she mentions,
@@ -80,7 +82,9 @@
     (let [graph (assoc graph mention (get graph mention {:username mention}))
           node (get graph mention)
           mentions-map (get node :mentions {})
-          graph (assoc-in graph [mention :mentions user] (inc (get mentions-map user 0)))]
+          graph (assoc-in graph
+                  [mention :mentions user]
+                  (inc (get mentions-map user 0)))]
       (assoc-in graph [user :mentions] {}))
     graph))
 
@@ -88,20 +92,21 @@
   "Given a graph and a sequence of new tweets in chronological order,
   update the graph."
   [graph tweet-maps]
-  (reduce (fn [acc tweet]
-            (let [user (string/lower-case (:from_user tweet))
-                  mentions (parse-mentions tweet)
-                  node (get acc user {:mentions {}})]
-              (-> (assoc acc user
-                         (assoc node :last-tweet (:text tweet)
-                                     :image-url (:profile_image_url tweet)
-                                     :username (:from_user tweet)))
-                  (add-mentions user mentions))))
-          graph
-          (map #(select-keys % [:text :from_user :profile_image_url]) tweet-maps)))
+  (reduce
+    (fn [acc tweet]
+      (let [user (string/lower-case (:from_user tweet))
+            mentions (parse-mentions tweet)
+            node (get acc user {:mentions {}})]
+        (-> (assoc acc user
+                   (assoc node
+                     :last-tweet (:text tweet)
+                     :image-url (:profile_image_url tweet)
+                     :username (:from_user tweet)))
+            (add-mentions user mentions))))
+    graph
+    (map #(select-keys % [:text :from_user :profile_image_url]) tweet-maps)))
 
-(defn num-mentions [user]
-  (reduce + (vals (:mentions user))))
+(defn num-mentions [user] (reduce + (vals (:mentions user))))
 
 (defn update-state
   "Given an old state, maximum id and a new sequence of tweets, return
@@ -112,8 +117,7 @@
       (update-in [:tweet-count] #(+ % (count tweets)))
       (assoc :graph (update-graph (:graph old-state) (reverse tweets)))))
 
-(defn new-tweets [max-id tweets]
-  (filter #(> (:id %) max-id) tweets))
+(defn new-tweets [max-id tweets] (filter #(> (:id %) max-id) tweets))
 
 (defn new-tweets-callback
   "Given a json object, update the state with any new information and
@@ -125,32 +129,34 @@
         (send-event :new-tweets tweets)
         (send-event :graph-update (:graph @state)))))
 
-(defn set-tweet-status [css-class message]
-  (doto (dom/set-text :tweet-status message)
-    (classes/set (name css-class))))
+(defn set-tweet-status
+  [css-class message]
+  (doto (dom/set-text :tweet-status message) (classes/set (name css-class))))
 
-(defn error-callback [error]
-  (set-tweet-status :error "Twitter error"))
+(defn error-callback [error] (set-tweet-status :error "Twitter error"))
 
 (defn add-missing-tweets
   "Add missing data to the graph."
   [graph tweets]
   (let [new-tweets (reduce (fn [acc next-tweet]
-                             (assoc acc (string/lower-case (:from_user next-tweet))
-                                    next-tweet))
-                           {}
-                           (sort-by :id tweets))]
-    (reduce (fn [acc [node-name {:keys [from_user text profile_image_url]}]]
-              (if-let [old-tweet (get graph node-name)]
-                (if (:last-tweet old-tweet)
-                  acc
-                  (assoc acc node-name
-                         (merge old-tweet {:last-tweet text
-                                           :image-url profile_image_url
-                                           :username from_user})))
-                acc))
-            graph
-            new-tweets)))
+                             (assoc acc
+                               (string/lower-case (:from_user next-tweet))
+                                 next-tweet))
+                     {}
+                     (sort-by :id tweets))]
+    (reduce
+      (fn [acc [node-name {:keys [from_user text profile_image_url]}]]
+        (if-let [old-tweet (get graph node-name)]
+          (if (:last-tweet old-tweet)
+            acc
+            (assoc acc
+              node-name (merge old-tweet
+                               {:last-tweet text,
+                                :image-url profile_image_url,
+                                :username from_user})))
+          acc))
+      graph
+      new-tweets)))
 
 (defn ignored
   "Given a list of the usernames for missing tweets and the tweets
@@ -164,11 +170,9 @@
     (let [users (set (map #(string/lower-case (:from_user %)) tweets))
           missing (map string/lower-case missing)]
       (reduce (fn [acc next-missing]
-                (if (contains? users next-missing)
-                  acc
-                  (conj acc next-missing)))
-              #{}
-              missing))))
+                (if (contains? users next-missing) acc (conj acc next-missing)))
+        #{}
+        missing))))
 
 (defn add-missing-callback
   "Update the graph and the ignore-mentions list when data is received
@@ -199,12 +203,11 @@
   "Query twitter for usernames which are currently missing data in the
   graph. Limit this query to max-missing-query names."
   [missing]
-  (let [q (apply str (interpose " OR " (map #(str "from:" %)
-                                            (take max-missing-query missing))))]
+  (let [q (apply str
+            (interpose " OR "
+              (map #(str "from:" %) (take max-missing-query missing))))]
     (set-tweet-status :okay "Fetching mentioned tweets")
-    (retrieve (doto (js-obj)
-                (aset "q" q)
-                (aset "rpp" results-per-page))
+    (retrieve (doto (js-obj) (aset "q" q) (aset "rpp" results-per-page))
               #(add-missing-callback missing %)
               error-callback)))
 
@@ -213,9 +216,7 @@
   []
   (when-let [tag (:search-tag @state)]
     (set-tweet-status :okay "Fetching tweets")
-    (retrieve (doto (js-obj)
-                (aset "q" tag)
-                (aset "rpp" results-per-page))
+    (retrieve (doto (js-obj) (aset "q" tag) (aset "rpp" results-per-page))
               new-tweets-callback
               error-callback)))
 
@@ -223,9 +224,7 @@
   "If there are missing tweets then fetch them, if not fetch new tweets."
   []
   (let [missing (missing-tweets (:graph @state))]
-    (if (seq missing)
-      (fetch-mentioned-tweets missing)
-      (fetch-new-tweets))))
+    (if (seq missing) (fetch-mentioned-tweets missing) (fetch-new-tweets))))
 
 (defn poll
   "Request new data from twitter once every 24 seconds. This will put
@@ -241,7 +240,10 @@
   keeping only the event listeners."
   []
   (do (let [listeners (:listeners @state)]
-        (reset! state (assoc initial-state :listeners listeners :search-tag (search-tag))))
+        (reset! state
+                (assoc initial-state
+                  :listeners listeners
+                  :search-tag (search-tag))))
       (fetch-tweets)
       (send-event :track-clicked)))
 
@@ -258,50 +260,37 @@
 
 (start-app)
 
-(defn link [url s]
-  (str "<a href='" url "' target='_twitterbuzz'>" s "</a>"))
+(defn link [url s] (str "<a href='" url "' target='_twitterbuzz'>" s "</a>"))
 
 (defn markup
   "Add markup to tweet text to activate links."
   [s]
-  (let [markup-f (fn [s] (let [w (string/trim s)]
-                          (cond (gstring/startsWith w "http://")
-                                (link w w)
-                                (gstring/startsWith w "@")
-                                (link (str "http://twitter.com/#!/" (re-find #"\w+" w)) w)
-                                :else s)))]
+  (let [markup-f
+          (fn [s]
+            (let [w (string/trim s)]
+              (cond (gstring/startsWith w "http://") (link w w)
+                    (gstring/startsWith w "@")
+                      (link (str "http://twitter.com/#!/" (re-find #"\w+" w)) w)
+                    :else s)))]
     (string/join " " (map markup-f (string/split s #"[ ]")))))
 
 (comment
-
   (parse-mentions {:text "What's up @sue: and @Larry"})
-  
   (add-mentions {} "jim" ["sue"])
   (add-mentions {"sue" {}} "jim" ["sue"])
-  
-  (def tweets [{:profile_image_url "url1"
-                :from_user "Jim"
-                :text "I like cookies!"}
-               {:profile_image_url "url2"
-                :from_user "sue"
-                :text "Me to @jim."}
-               {:profile_image_url "url3"
-                :from_user "bob"
-                :text "You shouldn't eat so many cookies @sue"}
-               {:profile_image_url "url4"
-                :from_user "sam"
-                :text "@Bob that was a cruel thing to say to @Sue."}
-               {:profile_image_url "url5"
-                :from_user "ted"
-                :text "@foo is awesome!"}])
-  
+  (def tweets
+    [{:profile_image_url "url1", :from_user "Jim", :text "I like cookies!"}
+     {:profile_image_url "url2", :from_user "sue", :text "Me to @jim."}
+     {:profile_image_url "url3",
+      :from_user "bob",
+      :text "You shouldn't eat so many cookies @sue"}
+     {:profile_image_url "url4",
+      :from_user "sam",
+      :text "@Bob that was a cruel thing to say to @Sue."}
+     {:profile_image_url "url5", :from_user "ted", :text "@foo is awesome!"}])
   (def graph (update-graph {} tweets))
   (count graph)
-
   (num-mentions (get graph "sue"))
   (num-mentions (get graph "bob"))
   (num-mentions (get graph "sam"))
-  
-  (take 1 (reverse (sort-by #(num-mentions (second %)) (seq graph))))
-  
-  )
+  (take 1 (reverse (sort-by #(num-mentions (second %)) (seq graph)))))

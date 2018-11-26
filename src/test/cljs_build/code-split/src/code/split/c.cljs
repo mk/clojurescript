@@ -4,8 +4,6 @@
 
 (enable-console-print!)
 
-(defn hello []
-  (println "Hello from code.split.c.")
-  (d/hello))
+(defn hello [] (println "Hello from code.split.c.") (d/hello))
 
 (loader/set-loaded! :c)

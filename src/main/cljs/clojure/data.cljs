@@ -1,15 +1,13 @@
 ;   Copyright (c) Rich Hickey. All rights reserved.
 ;   The use and distribution terms for this software are covered by the
 ;   Eclipse Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
-;   which can be found in the file epl-v10.html at the root of this distribution.
+;   which can be found in the file epl-v10.html at the root of this
+;   distribution.
 ;   By using this software in any fashion, you are agreeing to be bound by
 ;   the terms of this license.
 ;   You must not remove this notice, or any other, from this software.
 
-(ns 
-  ^{:author "Stuart Halloway",
-    :doc "Non-core data functions."}
-  clojure.data
+(ns ^{:author "Stuart Halloway", :doc "Non-core data functions."} clojure.data
   (:require [clojure.set :as set]))
 
 (declare ^{:arglists '([a b])} diff)
@@ -25,10 +23,9 @@
    an equivalent vector, with nil for any missing keys"
   [m]
   (when (seq m)
-    (reduce
-     (fn [result [k v]] (assoc result k v))
-     (vec (repeat (apply max (keys m))  nil))
-     m)))
+    (reduce (fn [result [k v]] (assoc result k v))
+      (vec (repeat (apply max (keys m)) nil))
+      m)))
 
 (defn- diff-associative-key
   "Diff associative things a and b, comparing only the key k."
@@ -38,38 +35,29 @@
         [a* b* ab] (diff va vb)
         in-a (contains? a k)
         in-b (contains? b k)
-        same (and in-a in-b
-                  (or (not (nil? ab))
-                      (and (nil? va) (nil? vb))))]
+        same (and in-a in-b (or (not (nil? ab)) (and (nil? va) (nil? vb))))]
     [(when (and in-a (or (not (nil? a*)) (not same))) {k a*})
      (when (and in-b (or (not (nil? b*)) (not same))) {k b*})
-     (when same {k ab})
-     ]))
+     (when same {k ab})]))
 
 (defn- diff-associative
   "Diff associative things a and b, comparing only keys in ks (if supplied)."
-  ([a b]
-     (diff-associative a b (set/union (keys a) (keys b))))
+  ([a b] (diff-associative a b (set/union (keys a) (keys b))))
   ([a b ks]
-     (reduce
-      (fn [diff1 diff2]
-        (doall (map merge diff1 diff2)))
-      [nil nil nil]
-      (map
-       (partial diff-associative-key a b)
-       ks))))
+   (reduce (fn [diff1 diff2] (doall (map merge diff1 diff2)))
+     [nil nil nil]
+     (map (partial diff-associative-key a b) ks))))
 
 (defn- diff-sequential
   [a b]
-  (vec (map vectorize (diff-associative
-                       (if (vector? a) a (vec a))
-                       (if (vector? b) b (vec b))
-                       (range (max (count a) (count b)))))))
+  (vec (map vectorize
+         (diff-associative (if (vector? a) a (vec a))
+                           (if (vector? b) b (vec b))
+                           (range (max (count a) (count b)))))))
 
 (defn- diff-set
   [a b]
-  [(not-empty (set/difference a b))
-   (not-empty (set/difference b a))
+  [(not-empty (set/difference a b)) (not-empty (set/difference b a))
    (not-empty (set/intersection a b))])
 
 (defprotocol EqualityPartition
@@ -82,64 +70,46 @@
 
 (extend-protocol EqualityPartition
   nil
-  (equality-partition [x] :atom)
-
+    (equality-partition [x] :atom)
   string
-  (equality-partition [x] :atom)
-
+    (equality-partition [x] :atom)
   number
-  (equality-partition [x] :atom)
-
+    (equality-partition [x] :atom)
   array
-  (equality-partition [x] :sequential)
-
+    (equality-partition [x] :sequential)
   function
-  (equality-partition [x] :atom)
-
+    (equality-partition [x] :atom)
   boolean
-  (equality-partition [x] :atom)
-
+    (equality-partition [x] :atom)
   default
-  (equality-partition [x]
-    (cond
-     (satisfies? IMap x) :map
-     (satisfies? ISet x) :set
-     (satisfies? ISequential x) :sequential
-     :default :atom)))
+    (equality-partition [x]
+      (cond (satisfies? IMap x) :map
+            (satisfies? ISet x) :set
+            (satisfies? ISequential x) :sequential
+            :default :atom)))
 
 (extend-protocol Diff
   nil
-  (diff-similar [a b]
-    (atom-diff a b))
-
+    (diff-similar [a b] (atom-diff a b))
   string
-  (diff-similar [a b]
-    (atom-diff a b))
-
+    (diff-similar [a b] (atom-diff a b))
   number
-  (diff-similar [a b]
-    (atom-diff a b))
-
+    (diff-similar [a b] (atom-diff a b))
   array
-  (diff-similar [a b]
-    (diff-sequential a b))
-
+    (diff-similar [a b] (diff-sequential a b))
   function
-  (diff-similar [a b]
-    (atom-diff a b))
-
+    (diff-similar [a b] (atom-diff a b))
   boolean
-  (diff-similar [a b]
-    (atom-diff a b))
-
+    (diff-similar [a b] (atom-diff a b))
   default
-  (diff-similar [a b]
-    ((case (equality-partition a)
-       :atom atom-diff
-       :set diff-set
-       :sequential diff-sequential
-       :map diff-associative)
-     a b)))
+    (diff-similar [a b]
+      ((case (equality-partition a)
+         :atom atom-diff
+         :set diff-set
+         :sequential diff-sequential
+         :map diff-associative)
+        a
+        b)))
 
 (defn diff
   "Recursively compares a and b, returning a tuple of
@@ -159,4 +129,4 @@
     (if (= (equality-partition a) (equality-partition b))
       (diff-similar a b)
       (atom-diff a b))))
-  
+

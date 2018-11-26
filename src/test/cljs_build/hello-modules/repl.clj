@@ -3,15 +3,13 @@
 (require '[cljs.repl.browser :as rb])
 
 (def opts
-  {:watch "src"
-   :output-dir "out"
-   :asset-path "/out"
-   :optimizations :none
-   :modules {:foo {:entries '#{foo.core}
-                   :output-to "out/foo.js"}
-             :bar {:entries '#{bar.core}
-                   :output-to "out/bar.js"}}
-   :browser-repl true
+  {:watch "src",
+   :output-dir "out",
+   :asset-path "/out",
+   :optimizations :none,
+   :modules {:foo {:entries '#{foo.core}, :output-to "out/foo.js"},
+             :bar {:entries '#{bar.core}, :output-to "out/bar.js"}},
+   :browser-repl true,
    :verbose true})
 
 (b/build "src" opts)

@@ -1,7 +1,8 @@
 ;   Copyright (c) Rich Hickey. All rights reserved.
 ;   The use and distribution terms for this software are covered by the
 ;   Eclipse Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
-;   which can be found in the file epl-v10.html at the root of this distribution.
+;   which can be found in the file epl-v10.html at the root of this
+;   distribution.
 ;   By using this software in any fashion, you are agreeing to be bound by
 ;   the terms of this license.
 ;   You must not remove this notice, or any other, from this software.
@@ -20,9 +21,10 @@
 ;; * December 9, 2008: first version
 
 
-(ns 
+(ns
   ^{:author "Stuart Sierra",
-     :doc "This file defines a generic tree walker for Clojure data
+    :doc
+      "This file defines a generic tree walker for Clojure data
 structures.  It takes any data structure (list, vector, map, set,
 seq), calls a function on every element, and uses the return value
 of the function in place of the original.  This makes it fairly
@@ -39,17 +41,15 @@ the sorting function."}
   functions.  Applies inner to each element of form, building up a
   data structure of the same type, then applies outer to the result.
   Recognizes all Clojure data structures. Consumes seqs as with doall."
-
   {:added "1.1"}
   [inner outer form]
-  (cond
-    (list? form)      (outer (apply list (map inner form)))
-    (map-entry? form)
-    (outer (MapEntry. (inner (key form)) (inner (val form)) nil))
-    (seq? form)       (outer (doall (map inner form)))
-    (record? form)    (outer (reduce (fn [r x] (conj r (inner x))) form form))
-    (coll? form)      (outer (into (empty form) (map inner form)))
-    :else             (outer form)))
+  (cond (list? form) (outer (apply list (map inner form)))
+        (map-entry? form)
+          (outer (MapEntry. (inner (key form)) (inner (val form)) nil))
+        (seq? form) (outer (doall (map inner form)))
+        (record? form) (outer (reduce (fn [r x] (conj r (inner x))) form form))
+        (coll? form) (outer (into (empty form) (map inner form)))
+        :else (outer form)))
 
 (defn postwalk
   "Performs a depth-first, post-order traversal of form.  Calls f on

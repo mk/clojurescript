@@ -1,37 +1,32 @@
 ;   Copyright (c) Rich Hickey. All rights reserved.
 ;   The use and distribution terms for this software are covered by the
 ;   Eclipse Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
-;   which can be found in the file epl-v10.html at the root of this distribution.
+;   which can be found in the file epl-v10.html at the root of this
+;   distribution.
 ;   By using this software in any fashion, you are agreeing to be bound by
 ;   the terms of this license.
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.spec.test.alpha
-  (:require
-    [cljs.analyzer :as ana]
-    [cljs.analyzer.api :as ana-api]
-    [clojure.string :as string]
-    [cljs.spec.alpha :as s]
-    [cljs.spec.gen.alpha :as gen]))
+  (:require [cljs.analyzer :as ana]
+            [cljs.analyzer.api :as ana-api]
+            [clojure.string :as string]
+            [cljs.spec.alpha :as s]
+            [cljs.spec.gen.alpha :as gen]))
 
 (defonce ^:private instrumented-vars (atom #{}))
 
-(defn- collectionize
-  [x]
-  (if (symbol? x)
-    (list x)
-    x))
+(defn- collectionize [x] (if (symbol? x) (list x) x))
 
-(defn- enumerate-namespace* [sym-or-syms]
+(defn- enumerate-namespace*
+  [sym-or-syms]
   (into #{}
-    (mapcat
-      (fn [sym]
-        (->> (vals (ana-api/ns-interns sym))
-          (map :name)
-          (map
-            (fn [name-sym]
-              (symbol (name sym) (name name-sym)))))))
-    (collectionize sym-or-syms)))
+        (mapcat
+          (fn [sym]
+            (->> (vals (ana-api/ns-interns sym))
+                 (map :name)
+                 (map (fn [name-sym] (symbol (name sym) (name name-sym)))))))
+        (collectionize sym-or-syms)))
 
 (defmacro enumerate-namespace
   "Given a symbol naming an ns, or a collection of such symbols,
@@ -39,19 +34,14 @@ returns the set of all symbols naming vars in those nses."
   [ns-sym-or-syms]
   `'~(enumerate-namespace* (eval ns-sym-or-syms)))
 
-(defn- fn-spec-name?
-  [s]
-  (symbol? s))
+(defn- fn-spec-name? [s] (symbol? s))
 
 (defmacro with-instrument-disabled
   "Disables instrument's checking of calls, within a scope."
   [& body]
   `(let [orig# @#'*instrument-enabled*]
      (set! *instrument-enabled* nil)
-     (try
-       ~@body
-       (finally
-         (set! *instrument-enabled* orig#)))))
+     (try ~@body (finally (set! *instrument-enabled* orig#)))))
 
 (defmacro instrument-1
   [[quote s] opts]
@@ -76,19 +66,17 @@ returns the set of all symbols naming vars in those nses."
          (when raw# (set! ~s raw#))
          '~(:name v)))))
 
-(defn- sym-or-syms->syms [sym-or-syms]
-  (into []
-    (mapcat
-      (fn [sym]
-        (if (and (string/includes? (str sym) ".")
-                 (ana-api/find-ns sym))
-          (->> (vals (ana-api/ns-interns sym))
-            (filter #(not (:macro %)))
-            (map :name)
-            (map
-              (fn [name-sym]
-                (symbol (name sym) (name name-sym)))))
-          [sym])))
+(defn- sym-or-syms->syms
+  [sym-or-syms]
+  (into
+    []
+    (mapcat (fn [sym]
+              (if (and (string/includes? (str sym) ".") (ana-api/find-ns sym))
+                (->> (vals (ana-api/ns-interns sym))
+                     (filter #(not (:macro %)))
+                     (map :name)
+                     (map (fn [name-sym] (symbol (name sym) (name name-sym)))))
+                [sym])))
     (collectionize sym-or-syms)))
 
 (defn- form->sym-or-syms
@@ -98,9 +86,7 @@ returns the set of all symbols naming vars in those nses."
   shape of the form. This avoids applying eval to extremely large forms in the
   latter case."
   [sym-or-syms]
-  (if (::no-eval (meta sym-or-syms))
-    (second sym-or-syms)
-    (eval sym-or-syms)))
+  (if (::no-eval (meta sym-or-syms)) (second sym-or-syms) (eval sym-or-syms)))
 
 (defmacro instrument
   "Instruments the vars named by sym-or-syms, a symbol or collection
@@ -141,102 +127,88 @@ invokes the fn you provide, enabling arbitrary stubbing and mocking.
 
 Returns a collection of syms naming the vars instrumented."
   ([]
-   `(instrument ^::no-eval '[~@(#?(:clj  s/speced-vars
-                                   :cljs cljs.spec.alpha$macros/speced-vars))]))
-  ([xs]
-   `(instrument ~xs nil))
+   `(instrument ^::no-eval
+                '[~@(#?(:clj s/speced-vars
+                        :cljs cljs.spec.alpha$macros/speced-vars))]))
+  ([xs] `(instrument ~xs nil))
   ([sym-or-syms opts]
    (let [syms (sym-or-syms->syms (form->sym-or-syms sym-or-syms))
          opts-sym (gensym "opts")]
      `(let [~opts-sym ~opts]
-        (reduce
-          (fn [ret# [_# f#]]
-            (let [sym# (f#)]
-              (cond-> ret# sym# (conj sym#))))
+        (reduce (fn [ret# [_# f#]]
+                  (let [sym# (f#)] (cond-> ret# sym# (conj sym#))))
           []
           (->> (zipmap '~syms
-                 [~@(map
-                      (fn [sym]
-                        `(fn [] (instrument-1 '~sym ~opts-sym)))
-                      syms)])
-            (filter #((instrumentable-syms ~opts-sym) (first %)))
-            (distinct-by first)))))))
+                       [~@(map (fn [sym]
+                                 `(fn [] (instrument-1 '~sym ~opts-sym)))
+                            syms)])
+               (filter #((instrumentable-syms ~opts-sym) (first %)))
+               (distinct-by first)))))))
 
 (defmacro unstrument
   "Undoes instrument on the vars named by sym-or-syms, specified
 as in instrument. With no args, unstruments all instrumented vars.
 Returns a collection of syms naming the vars unstrumented."
-  ([]
-   `(unstrument ^::no-eval '[~@(deref instrumented-vars)]))
+  ([] `(unstrument ^::no-eval '[~@(deref instrumented-vars)]))
   ([sym-or-syms]
    (let [syms (sym-or-syms->syms (form->sym-or-syms sym-or-syms))]
-     `(reduce
-        (fn [ret# f#]
-          (let [sym# (f#)]
-            (cond-> ret# sym# (conj sym#))))
+     `(reduce (fn [ret# f#] (let [sym# (f#)] (cond-> ret# sym# (conj sym#))))
         []
         [~@(->> syms
-             (map
-               (fn [sym]
-                 (when (symbol? sym)
-                   `(fn []
-                      (unstrument-1 '~sym)))))
-             (remove nil?))]))))
+                (map (fn [sym]
+                       (when (symbol? sym) `(fn [] (unstrument-1 '~sym)))))
+                (remove nil?))]))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; testing  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; testing
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defmacro check-1
   [[quote s :as qs] f spec opts]
-  (let [{:keys [name] :as v} (when qs (ana-api/resolve &env s))]
-    `(let [s#        '~name
-           opts#     ~opts
-           v#        ~(when v `(var ~name))
-           spec#     (or ~spec ~(when v `(s/get-spec (var ~name))))
+  (let [{:keys [name], :as v} (when qs (ana-api/resolve &env s))]
+    `(let [s# '~name
+           opts# ~opts
+           v# ~(when v `(var ~name))
+           spec# (or ~spec ~(when v `(s/get-spec (var ~name))))
            re-inst?# (and v# (seq (unstrument '~name)) true)
-           f#        (or ~f (when v# @v#))]
+           f# (or ~f (when v# @v#))]
        (try
-         (cond
-           (nil? f#)
-           {:failure (ex-info "No fn to spec" {::s/failure :no-fn})
-            :sym     s# :spec spec#}
-
-           (:args spec#)
-           (let [tcret# (#'quick-check f# spec# opts#)]
-             (#'make-check-result s# spec# tcret#))
-
-           :default
-           {:failure (ex-info "No :args spec" {::s/failure :no-args-spec})
-            :sym     s# :spec spec#})
-         (finally
-           (when re-inst?# (instrument '~name)))))))
+         (cond (nil? f#) {:failure (ex-info "No fn to spec"
+                                            {::s/failure :no-fn}),
+                          :sym s#,
+                          :spec spec#}
+               (:args spec#) (let [tcret# (#'quick-check f# spec# opts#)]
+                               (#'make-check-result s# spec# tcret#))
+               :default {:failure (ex-info "No :args spec"
+                                           {::s/failure :no-args-spec}),
+                         :sym s#,
+                         :spec spec#})
+         (finally (when re-inst?# (instrument '~name)))))))
 
 (defmacro check-fn
   "Runs generative tests for fn f using spec and opts. See
 'check' for options and return."
-  ([f spec]
-   `(check-fn ~f ~spec nil))
+  ([f spec] `(check-fn ~f ~spec nil))
   ([f spec opts]
    `(let [opts# ~opts]
       (validate-check-opts opts#)
       (check-1 nil ~f ~spec opts#))))
 
 (defn checkable-syms*
-  ([]
-    (checkable-syms* nil))
+  ([] (checkable-syms* nil))
   ([opts]
-   (reduce into #{}
-     [(filter fn-spec-name? (keys @@#'s/registry-ref))
-      (keys (:spec opts))])))
+   (reduce into
+     #{}
+     [(filter fn-spec-name? (keys @@#'s/registry-ref)) (keys (:spec opts))])))
 
 (defmacro checkable-syms
   "Given an opts map as per check, returns the set of syms that
 can be checked."
-  ([]
-   `(checkable-syms nil))
+  ([] `(checkable-syms nil))
   ([opts]
    `(let [opts# ~opts]
       (validate-check-opts opts#)
-      (reduce conj #{}
+      (reduce conj
+        #{}
         '[~@(filter fn-spec-name? (keys @@#'s/registry-ref))
           ~@(keys (:spec opts))]))))
 
@@ -274,30 +246,24 @@ spec itself will have an ::s/failure value in ex-data:
 :no-gen         unable to generate :args
 :instrument     invalid args detected by instrument
 "
-  ([]
-   `(check ^::no-eval '~(checkable-syms*)))
-  ([sym-or-syms]
-   `(check ~sym-or-syms nil))
+  ([] `(check ^::no-eval '~(checkable-syms*)))
+  ([sym-or-syms] `(check ~sym-or-syms nil))
   ([sym-or-syms opts]
    (let [syms (sym-or-syms->syms (form->sym-or-syms sym-or-syms))
          opts-sym (gensym "opts")]
      `(let [~opts-sym ~opts]
         [~@(->> syms
-             (filter (checkable-syms* opts))
-             (map
-               (fn [sym]
-                 (do `(check-1 '~sym nil nil ~opts-sym)))))]))))
+                (filter (checkable-syms* opts))
+                (map (fn [sym] (do `(check-1 '~sym nil nil ~opts-sym)))))]))))
 
-(defmacro ^:private maybe-setup-static-dispatch [f ret arity]
+(defmacro ^:private maybe-setup-static-dispatch
+  [f ret arity]
   (let [arity-accessor (symbol (str ".-cljs$core$IFn$_invoke$arity$" arity))
         argv (mapv #(symbol (str "arg" %)) (range arity))]
     `(when (some? (~arity-accessor ~f))
-       (set! (~arity-accessor ~ret)
-         (fn ~argv
-           (apply ~ret ~argv))))))
+       (set! (~arity-accessor ~ret) (fn ~argv (apply ~ret ~argv))))))
 
-(defmacro ^:private setup-static-dispatches [f ret max-arity]
-  `(do
-     ~@(mapv (fn [arity]
-               `(maybe-setup-static-dispatch ~f ~ret ~arity))
-         (range (inc max-arity)))))
+(defmacro ^:private setup-static-dispatches
+  [f ret max-arity]
+  `(do ~@(mapv (fn [arity] `(maybe-setup-static-dispatch ~f ~ret ~arity))
+           (range (inc max-arity)))))

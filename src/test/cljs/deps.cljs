@@ -1,3 +1,3 @@
-{:externs ["externs.js"]
- :foreign-libs [{:file "calculator_global.js"
+{:externs ["externs.js"],
+ :foreign-libs [{:file "calculator_global.js",
                  :provides ["thirdparty.calculator"]}]}

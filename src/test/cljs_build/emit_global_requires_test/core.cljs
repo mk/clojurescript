@@ -6,10 +6,13 @@
 
 (enable-console-print!)
 
-(println "ReactDOMServer exists:" ReactDOMServer
-  (.-renderToString ReactDOMServer))
+(println "ReactDOMServer exists:"
+         ReactDOMServer
+         (.-renderToString ReactDOMServer))
 
-(println "hi" (ReactDOMServer/renderToString (createElement "div" nil "Hello World!")))
+(println "hi"
+         (ReactDOMServer/renderToString
+           (createElement "div" nil "Hello World!")))
 
 (mui-styles/createMuiTheme #js {})
 (mui-styles-a/foo)
